@@ -1,0 +1,72 @@
+---
+title: "Compte rendu projet BDD"
+author: "Stéphanie LEVON & Vincent ROCHER"
+date: "20 juin 2015"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    highlight: espresso
+    theme: default
+    toc: yes
+    toc_depth: 1
+---
+
+#Description de la base
+
+La base de donnée créée a pour nom « gestion_prescription ». Elle contient 7 tables énumérées ci-dessous : 
+
+* personnel
+* type-personnel
+* patient
+* panel_gene
+* gene
+* assoc_panel_gene
+* examen 
+
+Chacune de ces tables a pour clés primaire un id auto-incrémenté hormis la table d'association panel-gene (*assoc_panel_gene*). Cette table fait le lien entre les différents panels de gènes et les gènes. En effet, un panel est constitué de plusieurs gènes et un même gène peut exister dans plusieurs panels. 
+
+Plusieurs index ont été créés. Un index unique a été créé sur l'email de la table patient et sur celui de la table personnel. En effet, ce champ fait également office de login, il ne peut pas exister deux même adresses email. Par contre deux mots de passe peuvent être identiques puisqu'il sont associés à un login unique. Un dernier index unique a également été créé sur le nom des panels de gènes. Un nom de panel se doit d'être unique, puisque les panels ne contiennent pas tous les mêmes gènes. 
+
+La cohérence des données est assurées par la présence de 8 clés étrangères. La table d'association est reliée aux tables *panel_gene* et *gene*. Ces deux colonnes sont les constituants principales de la table d'association. 
+Le moteur de table *InnoDB* a été choisi car il permet la gestion des clés étrangères. 
+
+#Données utilisées pour la base
+
+La majorité des données utilisés pour remplir les champs sont fictives, elles ont été choisies au fur et à mesure pour tester le bon fonctionnement de la base de données.
+
+Pour les patients, il a été choisi d'utiliser [generatedata](http://www.generatedata.com/?lang=fr) pour générer un grand nombre de valeurs rapidement.
+
+En revanche, les valeurs utilisées pour la table *gene* sont réels. Ils proviennent de la base de données Ensembl, qui, à partir d'une liste d'identifiants, a pu nous fournir le Gene Symbol et le chromosome auquel appartient le gène. À partir de ce script, nous avons pu construire un pool de données contenant l'ensemble des gènes humains.
+
+#Justification des choix - ajouts
+
+Plusieurs champs ont été ajouté aux tables, notamment dans les tables *personnel* et *patient*. Il s'agit du champ personnel/patient_actif. Cette colonne permet de gérer la suppression d'un patient ou d'un prescripteur sans perturber les autres tables associées. Ainsi un historique des individus présents dans la base est conservé.  
+
+Un rapport doit pouvoir être généré à partir des données relatives à l'examen, il a été décidé de ne pas créer de table pour ce compte-rendu, simplement de reprendre l'ensemble des informations contenue dans la table examen pour la création d'un fichier au format pdf. 
+
+La table *type_personnel* contient un champ type_personnel_rang qui permet d'octroyer différents droits aux utilisateurs de la base. L'admin possède tous les droits, les prescripteurs peuvent ajouter des patients et des panels de gènes (ou en supprimer) et les patients peuvent seulement consulter les informations les concernant. Si d'autres personnels sont amenés à prescrire des examens ou a simplement visualiser les comptes-rendus (exemple : interne en médecine, médecin généraliste), il sera plus aisé d'adapter les droits à des individus de rangs autres que ceux décrits au début de ce paragraphe.  
+
+#Les actions possibles via l'interface utilisateur 
+
+##Choix des outils pour l'interface
+
+PHP a été choisi comme langage de communication entre la base de données et l'interface. Son module PDO permet d'utiliser la base de données directement depuis celle-ci, et son côté orienté objet permet de récupérer les données de façon simple et efficace. À l'aide de la documentation, il est alors plus facile de construire et de récupérer des résultats de requête, afin de les afficher dans l'interface. En outre, le côté "langage de programmation" de PHP permet de gérer efficacement les droits d'utilisateurs, et le côté sécurité que proccure les sessions.
+
+Pour l'interface en elle même, il a été choisi d'utiliser [Bootstrap](http://getbootstrap.com). Ce framework est largement utilisé dans le monde, et permet notamment de gérer le côté "responsive" des sites web. Le gros avantage de Bootstrap dans notre cas, c'est qu'il facilite l'insertion du contenu html par son côté "grille", qui permet de placer facilement les conteneurs html, avec un minimum de CSS personnel. En outre, l'implémentation du javascript, et de JQuery nous donne la possibilité d'implementer une interface un peu plus "complexe", sans avoir besoin de coder quoi que ce soit en javascript.
+
+##Description et utilisation de l'interface
+
+L'interface a été réalisée de telle sorte que la page d'accueil soit une page de connexion. 
+A partir de ce moment, les différents utilisateurs s'identifient et accèdent aux requêtes pour lesquelles ils possèdent les droits. Des sessions ont été créées afin de conserver l'identité de l'utilisateur enregistrée d'une page à l'autre. Lorsque l'utilisateur se déconnecte ou au bout d'un certain moment d'inactivité, les variables de sessions (nom, prénom, statut) ne sont plus gardées en mémoire. 
+L'admin peut supprimer un utilisateur ou un patient. Les prescripteurs peuvent créér de nouveaux examens, créer de nouveaux panels de gène ou encore ajouter de nouveaux gènes. Ils peuvent également accéder aux informations relatives à un patient donné. 
+
+Un patient peut consulter les informations concernant le dernier examen, en s'identifiant à partir de son adresse email et son numéro de sécurité sociale. 
+
+Idéalement, il aurait fallu que le patient recoive un e-mail dès lors qu'un prescripteur l'ajoute dans la base de données, et qu'il lui soit possible de télécharger le rapport au format PDF. Pour plus de sécurité, il serait plus pratique d'envoyer les informations de l'examen via un mail, lorsque le patient le réclame, plutôt que de les afficher sur une page.
+
+# Amélioration à envisager
+
+Lors de la création d'un nouvel examen, il aurait été judicieux de pouvoir avoir accès aux gènes constituant un panel afin de savoir s'il faut en créer un « à façon » si besoin. 
+
+D'autre part, il aurait été intéressant pour le patient de pouvoir modifier les données le concernant, notamment son adresse postale ou son numéro de téléphone. Son adresse mail en revanche sert de login, il est donc préférable que celle-ci ne soit pas modifiée. Accorder ces droits au patients pourrait être risqué au niveau de la sécurité des données. On pourrait imaginer un quatrième profil de personnel constitué par un personnel de secrétariat (suivant la structure de la clinique). Ce type de personne serait en charge de rentrer les patients dans la base de données et s'assurer de la mise à jour des informations. 

@@ -1,0 +1,1 @@
+SELECT gene_nom FROM panel_gene JOIN assoc_panel_gene ON panel_gene.panel_gene_id=assoc_panel_gene.assoc_panel_id JOIN gene ON assoc_panel_gene.assoc_gene_id=gene.gene_id
